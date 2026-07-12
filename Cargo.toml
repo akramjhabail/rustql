@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "crates/rustql-core",
+    "crates/rustql-api",
+    "crates/rustql-cli",
+    "crates/rustql-macros",
+    "crates/rustql-db",
+    "crates/rustql-bench",
+]
+resolver = "2"

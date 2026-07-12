@@ -1,0 +1,15 @@
+[package]
+name = "rustql-bench"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rustql-core = { path = "../rustql-core" }
+rustql-api = { path = "../rustql-api" }
+rustql-db = { path = "../rustql-db" }
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = "0.4"
+colored = "2"
