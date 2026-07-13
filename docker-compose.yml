@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "4001:4000"
+    environment:
+      - DATABASE_URL=postgres://rustql:rustql123@host.docker.internal:5432/rustqldb
+      - REDIS_URL=redis://host.docker.internal:6379
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

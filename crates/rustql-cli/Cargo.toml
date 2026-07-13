@@ -8,4 +8,9 @@ rustql-core = { path = "../rustql-core" }
 rustql-api = { path = "../rustql-api" }
 rustql-db = { path = "../rustql-db" }
 tokio = { version = "1", features = ["full"] }
-sqlx = { version = "0.9.0", features = ["runtime-tokio", "tls-rustls", "postgres", "macros"] }
+sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls", "postgres"] }
+clap = { version = "4", features = ["derive"] }
+colored = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
