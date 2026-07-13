@@ -13,3 +13,6 @@ tower-http = { version = "0.5", features = ["cors"] }
 jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"] }
 bcrypt = "0.19.2"
 chrono = "0.4.45"
+tower = "0.5.3"
+governor = "0.10.4"
+tower_governor = "0.8.0"
