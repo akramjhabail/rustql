@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod rate_limit;
+pub mod cache;
 
 use axum::{
     routing::post,
@@ -18,6 +19,7 @@ use rustql_core::{
     executor::{Executor, ResolvedValue},
 };
 use crate::rate_limit::RateLimiter;
+use crate::cache::Cache;
 
 #[derive(Deserialize)]
 pub struct QueryRequest {
@@ -34,6 +36,7 @@ pub struct AppState {
     pub executor: Executor,
     pub jwt_secret: String,
     pub rate_limiter: RateLimiter,
+    pub cache: Option<Cache>,
 }
 
 fn resolved_to_json(value: &ResolvedValue) -> serde_json::Value {
@@ -79,6 +82,25 @@ async fn handle_query(
         ).into_response();
     }
 
+    // Cache check (only for queries)
+    let is_query = payload.query.trim().starts_with("query");
+    if is_query {
+        if let Some(cache) = &state.cache {
+            let cache_key = format!("rustql:{}", payload.query);
+            if let Some(cached) = cache.get(&cache_key).await {
+                if let Ok(data) = serde_json::from_str(&cached) {
+                    return (
+                        StatusCode::OK,
+                        Json(QueryResponse {
+                            data: Some(data),
+                            errors: None,
+                        })
+                    ).into_response();
+                }
+            }
+        }
+    }
+
     let mut parser = Parser::new(&payload.query);
 
     match parser.parse() {
@@ -89,10 +111,20 @@ async fn handle_query(
                     for (k, v) in &data {
                         json_map.insert(k.clone(), resolved_to_json(v));
                     }
+                    let json_data = serde_json::Value::Object(json_map);
+
+                    // Cache store karo
+                    if is_query {
+                        if let Some(cache) = &state.cache {
+                            let cache_key = format!("rustql:{}", payload.query);
+                            cache.set(&cache_key, &json_data.to_string()).await;
+                        }
+                    }
+
                     (
                         StatusCode::OK,
                         Json(QueryResponse {
-                            data: Some(serde_json::Value::Object(json_map)),
+                            data: Some(json_data),
                             errors: None,
                         })
                     ).into_response()
@@ -117,10 +149,13 @@ async fn handle_query(
 }
 
 pub fn create_app(executor: Executor) -> Router {
+    let cache = Cache::new("redis://127.0.0.1/", 60).ok();
+
     let state = Arc::new(AppState {
         executor,
         jwt_secret: "rustql_secret_key_2024".to_string(),
-        rate_limiter: RateLimiter::new(100, 60), // 100 requests per minute
+        rate_limiter: RateLimiter::new(100, 60),
+        cache,
     });
 
     Router::new()
@@ -133,7 +168,8 @@ pub async fn start_server(executor: Executor, port: u16) {
     let app = create_app(executor);
     let addr = format!("0.0.0.0:{}", port);
     println!("🚀 RustQL Server running on http://{}", addr);
-    println!("🔒 Rate Limit: 100 requests/minute per IP");
+    println!("🔒 Rate Limit : 100 requests/minute per IP");
+    println!("⚡ Cache      : Redis (60s TTL)");
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(
         listener,
