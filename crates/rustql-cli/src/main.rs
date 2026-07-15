@@ -39,10 +39,12 @@ async fn setup_executor(db: Database) -> Executor {
     let schema = Schema::new();
     let mut executor = Executor::new(schema);
 
+    // Hello resolver
     executor.add_resolver("Query.hello", |_, _| async {
         Ok(ResolvedValue::String("Hello from RustQL! 🚀".to_string()))
     });
 
+    // Users resolver
     let pool1 = Arc::clone(&db.pool);
     executor.add_resolver("Query.users", move |_, _| {
         let pool = Arc::clone(&pool1);
@@ -67,6 +69,7 @@ async fn setup_executor(db: Database) -> Executor {
         }
     });
 
+    // Register resolver
     let pool2 = Arc::clone(&db.pool);
     executor.add_resolver("Mutation.register", move |field, _| {
         let pool = Arc::clone(&pool2);
@@ -123,6 +126,7 @@ async fn setup_executor(db: Database) -> Executor {
         }
     });
 
+    // Login resolver
     let pool3 = Arc::clone(&db.pool);
     executor.add_resolver("Mutation.login", move |field, _| {
         let pool = Arc::clone(&pool3);
@@ -171,6 +175,7 @@ async fn setup_executor(db: Database) -> Executor {
         }
     });
 
+    // Create User
     let pool4 = Arc::clone(&db.pool);
     executor.add_resolver("Mutation.createUser", move |field, _| {
         let pool = Arc::clone(&pool4);
@@ -213,6 +218,7 @@ async fn setup_executor(db: Database) -> Executor {
         }
     });
 
+    // Delete User
     let pool5 = Arc::clone(&db.pool);
     executor.add_resolver("Mutation.deleteUser", move |field, _| {
         let pool = Arc::clone(&pool5);
@@ -230,6 +236,59 @@ async fn setup_executor(db: Database) -> Executor {
                 .execute(pool.as_ref())
                 .await {
                 Ok(_) => Ok(ResolvedValue::String("User deleted!".to_string())),
+                Err(e) => Ok(ResolvedValue::String(format!("Error: {}", e)))
+            }
+        }
+    });
+
+    // Update User
+    let pool6 = Arc::clone(&db.pool);
+    executor.add_resolver("Mutation.updateUser", move |field, _| {
+        let pool = Arc::clone(&pool6);
+        let args = field.clone();
+        async move {
+            let id: i32 = args.iter()
+                .find(|(k, _)| k == "id")
+                .map(|(_, v)| match v {
+                    Value::Int(i) => *i as i32,
+                    _ => 0,
+                })
+                .unwrap_or(0);
+
+            let name = args.iter()
+                .find(|(k, _)| k == "name")
+                .map(|(_, v)| match v {
+                    Value::String(s) => s.clone(),
+                    _ => "".to_string(),
+                });
+
+            let email = args.iter()
+                .find(|(k, _)| k == "email")
+                .map(|(_, v)| match v {
+                    Value::String(s) => s.clone(),
+                    _ => "".to_string(),
+                });
+
+            match sqlx::query!(
+                "UPDATE users SET
+                name = COALESCE($2, name),
+                email = COALESCE($3, email)
+                WHERE id = $1
+                RETURNING id, name, email",
+                id, name, email
+            )
+            .fetch_one(pool.as_ref())
+            .await {
+                Ok(row) => {
+                    let mut user = HashMap::new();
+                    user.insert("id".to_string(),
+                        ResolvedValue::String(row.id.to_string()));
+                    user.insert("name".to_string(),
+                        ResolvedValue::String(row.name.clone()));
+                    user.insert("email".to_string(),
+                        ResolvedValue::String(row.email.clone()));
+                    Ok(ResolvedValue::Object(user))
+                }
                 Err(e) => Ok(ResolvedValue::String(format!("Error: {}", e)))
             }
         }
