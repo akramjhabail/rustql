@@ -1,0 +1,23 @@
+{
+  "name": "rustql-js",
+  "version": "0.1.0",
+  "description": "🦀 Official JavaScript/TypeScript SDK for RustQL - World's Fastest API Framework",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "node test.js"
+  },
+  "keywords": [
+    "rustql",
+    "graphql",
+    "api",
+    "rust",
+    "fast"
+  ],
+  "author": "akramjhabail",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
