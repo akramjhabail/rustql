@@ -7,6 +7,7 @@ use rustql_core::{
 };
 use rustql_api::start_server;
 use rustql_db::Database;
+use rustql_ws::WsServer;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -385,6 +386,12 @@ async fn main() {
                 Ok(db) => {
                     println!("✅ Connected!");
                     let executor = setup_executor(db).await;
+                    let ws_server = WsServer::new();
+                    let ws_port = port + 1;
+                    println!("🔌 WebSocket running on ws://0.0.0.0:{}", ws_port);
+                    tokio::spawn(async move {
+                        ws_server.start(ws_port).await;
+                    });
                     start_server(executor, port).await;
                 }
                 Err(e) => {
@@ -401,6 +408,11 @@ async fn main() {
                 Ok(db) => {
                     println!("✅ Connected!");
                     let executor = setup_executor(db).await;
+                    let ws_server = WsServer::new();
+                    println!("🔌 WebSocket running on ws://0.0.0.0:4001");
+                    tokio::spawn(async move {
+                        ws_server.start(4001).await;
+                    });
                     start_server(executor, 4000).await;
                 }
                 Err(e) => {

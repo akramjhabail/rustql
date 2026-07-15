@@ -7,6 +7,7 @@ edition = "2021"
 rustql-core = { path = "../rustql-core" }
 rustql-api = { path = "../rustql-api" }
 rustql-db = { path = "../rustql-db" }
+rustql-ws = { path = "../rustql-ws" }
 tokio = { version = "1", features = ["full"] }
 sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls", "postgres"] }
 clap = { version = "4", features = ["derive"] }
