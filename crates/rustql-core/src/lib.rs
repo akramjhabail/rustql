@@ -5,3 +5,4 @@ pub mod schema;
 pub mod executor;
 pub mod error;
 pub mod resolver;
+pub mod testing;
