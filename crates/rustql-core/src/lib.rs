@@ -6,3 +6,4 @@ pub mod executor;
 pub mod error;
 pub mod resolver;
 pub mod testing;
+pub mod safety;

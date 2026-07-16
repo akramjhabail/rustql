@@ -15,6 +15,7 @@ use std::sync::Arc;
 use std::net::SocketAddr;
 use tower_http::cors::CorsLayer;
 use rustql_core::{
+    safety::SchemaGuard,
     parser::Parser,
     executor::{Executor, ResolvedValue},
 };
@@ -37,6 +38,7 @@ pub struct AppState {
     pub jwt_secret: String,
     pub rate_limiter: RateLimiter,
     pub cache: Option<Cache>,
+    pub schema_guard: SchemaGuard,
 }
 
 fn resolved_to_json(value: &ResolvedValue) -> serde_json::Value {
@@ -105,6 +107,17 @@ async fn handle_query(
 
     match parser.parse() {
         Ok(document) => {
+            // Safety check
+            if let Err(e) = state.schema_guard.validate(&document) {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(QueryResponse {
+                        data: None,
+                        errors: Some(vec![format!("[SAFETY] {}", e)]),
+                    })
+                ).into_response();
+            }
+
             match state.executor.execute(&document).await {
                 Ok(data) => {
                     let mut json_map = serde_json::Map::new();
@@ -168,6 +181,7 @@ pub fn create_app(executor: Executor) -> Router {
         jwt_secret: "rustql_secret_key_2024".to_string(),
         rate_limiter: RateLimiter::new(100, 60),
         cache,
+        schema_guard: SchemaGuard::default(),
     });
 
     Router::new()
