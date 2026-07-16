@@ -82,7 +82,7 @@ async fn handle_query(
         ).into_response();
     }
 
-    // Cache check (only for queries)
+    // Cache check
     let is_query = payload.query.trim().starts_with("query");
     if is_query {
         if let Some(cache) = &state.cache {
@@ -113,7 +113,6 @@ async fn handle_query(
                     }
                     let json_data = serde_json::Value::Object(json_map);
 
-                    // Cache store karo
                     if is_query {
                         if let Some(cache) = &state.cache {
                             let cache_key = format!("rustql:{}", payload.query);
@@ -129,20 +128,33 @@ async fn handle_query(
                         })
                     ).into_response()
                 }
-                Err(e) => (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(QueryResponse {
-                        data: None,
-                        errors: Some(vec![e.to_string()]),
-                    })
-                ).into_response(),
+                Err(e) => {
+                    let status = match e.status_code() {
+                        400 => StatusCode::BAD_REQUEST,
+                        401 => StatusCode::UNAUTHORIZED,
+                        404 => StatusCode::NOT_FOUND,
+                        429 => StatusCode::TOO_MANY_REQUESTS,
+                        _ => StatusCode::INTERNAL_SERVER_ERROR,
+                    };
+                    (
+                        status,
+                        Json(QueryResponse {
+                            data: None,
+                            errors: Some(vec![
+                                format!("[{}] {}", e.error_type(), e)
+                            ]),
+                        })
+                    ).into_response()
+                }
             }
         }
         Err(e) => (
             StatusCode::BAD_REQUEST,
             Json(QueryResponse {
                 data: None,
-                errors: Some(vec![e.to_string()]),
+                errors: Some(vec![
+                    format!("[PARSE_ERROR] {}", e)
+                ]),
             })
         ).into_response(),
     }
